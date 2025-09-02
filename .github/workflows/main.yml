@@ -1,0 +1,29 @@
+name: AWS CI/CD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  setup:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.ACTION_TOKEN }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Create .env file
+        run: touch .env
+
+      - name: Populate .env with secrets
+        run: |
+          echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
+
+      - name: Restart the app
+        run: |
+          pm2 start index.js || pm2 restart app
