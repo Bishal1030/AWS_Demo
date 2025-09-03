@@ -31,4 +31,4 @@ jobs:
 
       - name: Restart the app
         run: |
-          pm2 start index.js || pm2 restart app
+          /home/ubuntu/.nvm/versions/node/v22.19.0/bin/pm2 start index.js || /home/ubuntu/.nvm/versions/node/v22.19.0/bin/pm2 restart app
