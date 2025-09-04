@@ -31,4 +31,4 @@ jobs:
 
       - name: Restart the app
         run: |
-          /home/ubuntu/.nvm/versions/node/v22.19.0/bin/pm2 start /home/ubuntu/actions-runner/_work/AWS_Demo/AWS_Demo/index.js --name app || /home/ubuntu/.nvm/versions/node/v22.19.0/bin/pm2 restart app
+          /home/ubuntu/.nvm/versions/node/v22.19.0/bin/pm2 restart /home/ubuntu/actions-runner/_work/AWS_Demo/AWS_Demo/index.js
