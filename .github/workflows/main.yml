@@ -2,33 +2,52 @@ name: AWS CI/CD
 
 on:
   push:
-    branches: [main]
+    branches: [dev, main]
+
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
-  setup:
+  deploy:
     runs-on: self-hosted
+    env:
+      APP_NAME: app-${{ github.ref_name }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.ACTION_TOKEN }}
 
-      - name: Install Node.js
-        uses: actions/setup-node@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 18
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Create .env file
-        run: touch .env
+      - name: Build
+        run: npm run build --if-present
 
-      - name: Populate .env with secrets
+      - name: Write .env file
+        env:
+          ENV_FILE_CONTENT: ${{ github.ref_name == 'main' && secrets.ENV_FILE_CONTENT_MAIN || secrets.ENV_FILE_CONTENT_DEV }}
+        run: printf '%s\n' "$ENV_FILE_CONTENT" > .env
+
+      - name: Load AWS settings from .env
         run: |
-          echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
+          grep -E '^(AWS_ENDPOINT_URL|AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|AWS_DEFAULT_REGION)=' .env >> "$GITHUB_ENV"
 
-      - name: Restart the app
+      - name: Check Floci connection
+        run: aws ec2 describe-key-pairs
+
+      - name: Deploy with pm2
         run: |
-          /home/ubuntu/.nvm/versions/node/v22.19.0/bin/pm2 start /home/ubuntu/actions-runner/_work/AWS_Demo/AWS_Demo/index.js --name app || /home/ubuntu/.nvm/versions/node/v22.19.0/bin/pm2 restart app
+          npm install -g pm2
+          pm2 describe "$APP_NAME" > /dev/null \
+            && pm2 restart "$APP_NAME" --update-env \
+            || pm2 start index.js --name "$APP_NAME"
+          pm2 save
